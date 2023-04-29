@@ -18,6 +18,12 @@ Resources:
       CodeUri: src/order-api/functions/post-orders/
       Handler: app.postOrders
       Runtime: nodejs14.x
+      Events:
+        SQSEventSource:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt OrderQueue.Arn
+            BatchSize: 10
       Environment:
         Variables:
           ORDER_TABLE: !Ref OrderTable
@@ -170,18 +176,16 @@ Resources:
         Statement:
           Action:
             - lambda:*
+            - sqs:SendMessage
           Effect: Allow
           Resource:
             - !GetAtt GetOrders.Arn
-            - !GetAtt PostOrders.Arn
+            - !GetAtt OrderQueue.Arn
             - !GetAtt GetSingleOrder.Arn
             - !GetAtt UpdateOrder.Arn
             - !GetAtt DeleteOrder.Arn
       Roles:
         - Ref: "ApiGwExecutionRole"
-
-
-
 
   OrderTable:
     Type: AWS::DynamoDB::Table
@@ -201,6 +205,15 @@ Resources:
         ReadCapacityUnits: 5
         WriteCapacityUnits: 5
 
+  OrderQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      RedrivePolicy:
+        deadLetterTargetArn: !GetAtt OrderDLQueue.Arn
+        maxReceiveCount: 5
+
+  OrderDLQueue:
+    Type: AWS::SQS::Queue
 
 
 Outputs:
@@ -230,3 +243,9 @@ Outputs:
     Value: !Ref OrderTable
 
 
+  OrderQueueUrl:
+    Description: "URL of order queue"
+    Value: !Ref OrderQueue
+  OrderDLQueueUrl:
+    Description: "URL of order dead-letter queue"
+    Value: !Ref OrderDLQueue
