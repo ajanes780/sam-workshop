@@ -30,7 +30,7 @@ exports.postOrders = async (event) => {
     let parsedBody = JSON.parse(body);
 
     let item = {
-      user_id : "static_user",
+    user_id: parsedBody.cognito_userid,
       id: messageId,
       name: parsedBody.data.name,
       restaurantId: parsedBody.data.restaurantId,
